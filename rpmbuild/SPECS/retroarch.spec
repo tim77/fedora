@@ -22,7 +22,7 @@ Name:           %{appname}-freeworld
 Name:           %{appname}
 %endif
 Version:        1.8.1
-Release:        11%{?dist}
+Release:        12%{?dist}
 %if %{with freeworld}
 Summary:        Cross-platform, sophisticated frontend for the libretro API. Non-free version.
 %else
@@ -37,7 +37,6 @@ Summary:        Cross-platform, sophisticated frontend for the libretro API
 ### deps/SPIRV-Cross/
 ### retroarch-assets/xmb/flatui/
 ### deps/glslang/glslang/
-### deps/mbedtls/
 ### gfx/include/vulkan/
 ### 
 ### Creative Commons Attribution Public License (v4.0)
@@ -64,10 +63,6 @@ Summary:        Cross-platform, sophisticated frontend for the libretro API
 ### ------------------------------------------------
 ### memory/neon/memcpy-neon.S
 ### 
-### Public domain
-### ----------------------------
-### deps/libFLAC/
-### 
 ### SIL Open Font License
 ### ------------------------------------
 ### retroarch-assets/xmb/automatic/
@@ -89,12 +84,10 @@ Summary:        Cross-platform, sophisticated frontend for the libretro API
 ### RetroArch-1.8.1/deps/discord-rpc/
 ### RetroArch-1.8.1/deps/glslang/
 ### RetroArch-1.8.1/deps/ibxm/
-### RetroArch-1.8.1/deps/libFLAC/
-### RetroArch-1.8.1/deps/miniupnpc/
 ### RetroArch-1.8.1/gfx/
 ### RetroArch-1.8.1/libretro-common/
 ###
-License:        GPLv3+ and GPLv2 CC-BY and CC0 and BSD and Public Domain and ASL 2.0 and MIT
+License:        GPLv3+ and GPLv2 and CC-BY and CC0 and BSD and ASL 2.0 and MIT
 
 URL:            https://www.libretro.com/
 Source0:        %{short_url}/RetroArch/archive/v%{version}/%{appname}-%{version}.tar.gz
@@ -104,7 +97,7 @@ Source1:        %{short_url}/%{appname}-assets/archive/%{commit}/%{appname}-asse
 
 ### AppData manifest
 ### https://github.com/flathub/org.libretro.RetroArch/blob/master/org.libretro.RetroArch.appdata.xml
-Source2:        https://raw.githubusercontent.com/flathub/%{uuid}/06be0a83a01514a675f5492db5ceb1f81a9dae68/%{uuid}.appdata.xml
+Source2:        https://raw.githubusercontent.com/flathub/%{uuid}/%{commit}/%{uuid}.appdata.xml
 
 ### https://github.com/libretro/retroarch-assets/pull/334
 Patch0:         https://github.com/libretro/retroarch-assets/pull/334.patch#/add-executable-bit-to-script.patch
@@ -114,6 +107,7 @@ BuildRequires:  gcc-c++ >= 7
 BuildRequires:  libappstream-glib
 BuildRequires:  libv4l-devel
 BuildRequires:  libXxf86vm-devel
+BuildRequires:  mbedtls-devel
 BuildRequires:  mesa-libEGL-devel
 BuildRequires:  mesa-libgbm-devel
 BuildRequires:  perl-Net-DBus
@@ -178,14 +172,10 @@ Provides:       bundled(discord-rpc)
 Provides:       bundled(dr)
 Provides:       bundled(glslang)
 Provides:       bundled(ibxm)
-Provides:       bundled(libFLAC) = 1.3.2
-Provides:       bundled(libz)
 
 ### https://github.com/libretro/RetroArch/issues/8153
 Provides:       bundled(lua) = 5.3.5
 
-Provides:       bundled(mbedtls)
-Provides:       bundled(miniupnpc) = 2.0
 Provides:       bundled(rcheevos) = 7.0.2
 Provides:       bundled(SPIRV-Cross)
 Provides:       bundled(stb)
@@ -240,12 +230,18 @@ popd
 ### Unbundling
 pushd deps
 rm -rf  libfat \
+        libFLAC \
         libiosuhax \
         libvita2d \
+        libz \
+        miniupnpc \
         peglib \
         pthreads \
         wayland-protocols
 popd
+
+## Not part of the 'mbedtls' upstream source
+find deps/mbedtls/ ! -name 'cacert.h' -type f -exec rm -f {} +
 
 ### Use system assets, libretro cores and audio/video filters
 sed -e 's!# assets_directory =!assets_directory = %{_datadir}/libretro/assets/!g' \
@@ -262,7 +258,11 @@ sed -e 's!HAVE_UPDATE_ASSETS=yes!HAVE_UPDATE_ASSETS=no!g' -i qb/config.params.sh
 
 
 %build
-./configure --prefix=%{_prefix}
+./configure --prefix=%{_prefix} \
+    --disable-builtinflac \
+    --disable-builtinmbedtls \
+    --disable-builtinminiupnpc \
+    --disable-builtinzlib
 %set_build_flags
 %make_build
 
@@ -327,6 +327,8 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/*.xml
 %files
 %license COPYING
 %doc README.md README-exynos.md README-OMAP.md README-mali_fbdev_r4p0.md CHANGES.md CONTRIBUTING.md
+%{_datadir}/applications/*.desktop
+%{_metainfodir}/*.xml
 %if %{with freeworld}
 %{_bindir}/%{appname}-freeworld
 %exclude %{_bindir}/%{appname}-cg2glsl
@@ -346,17 +348,17 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/*.xml
 %files assets
 ### Incorrect-fsf-address
 ### https://github.com/libretro/retroarch-assets/issues/335
-%{_datadir}/libretro/
+%{_datadir}/libretro/assets/
 %{_licensedir}/%{appname}-assets/
+%dir %{_datadir}/libretro/
 
 %files filters
-%{_libdir}/%{appname}/
+%{_libdir}/%{appname}/filters/
+%dir %{_libdir}/%{appname}
 %endif
-%{_datadir}/applications/*.desktop
-%{_metainfodir}/*.xml
 
 
 %changelog
-* Fri Nov 29 2019 Artem Polishchuk <ego.cordatus@gmail.com> - 1.8.1-11
+* Fri Nov 29 2019 Artem Polishchuk <ego.cordatus@gmail.com> - 1.8.1-12
 - Initial package
 - Thanks to Vitaly Zaitsev <vitaly@easycoding.org> for help with packaging and review
