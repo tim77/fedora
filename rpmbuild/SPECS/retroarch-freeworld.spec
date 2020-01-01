@@ -198,7 +198,7 @@ engines. libretro is completely open and free for anyone to use.}
 
 
 %package        assets
-Summary:        Assets files for %{appname}
+Summary:        Assets files for %{name}
 BuildArch:      noarch
 
 Requires:       %{name} = %{?epoch:%{epoch}:}%{version}-%{release}
@@ -212,16 +212,16 @@ Provides:       bundled(sf-atarian-system-fonts)
 Provides:       bundled(titilium-web-fonts)
 
 %description    assets
-Assets files for %{appname}.
+Assets files for %{name}.
 
 
 %package        filters
-Summary:        Audio and video filters for %{appname}
+Summary:        Audio and video filters for %{name}
 
 Requires:       %{name}%{?_isa} = %{?epoch:%{epoch}:}%{version}-%{release}
 
 %description    filters
-Audio and video filters for %{appname}.
+Audio and video filters for %{name}.
 
 
 %prep
