@@ -2,7 +2,20 @@
 %bcond_without freeworld
 %bcond_with nonfree
 
-# Enable LTO
+%global appname         retroarch
+%global uuid            org.libretro.RetroArch
+%global package_name    %{appname}%{p_suffix}
+
+# Freeworld package
+%if %{with freeworld}
+%global p_suffix        -freeworld
+%global sum_suffix      Freeworld version.
+%else
+%global p_suffix        %{nil}
+%global sum_suffix      %{nil}
+%endif
+
+# LTO
 %global optflags        %{optflags} -flto
 %global build_ldflags   %{build_ldflags} -flto
 
@@ -13,27 +26,9 @@
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 %global date        20191031
 
-%global appname retroarch
-%global uuid    org.libretro.RetroArch
-
-# Summary suffix
-%global sum_suffix %{nil}
-%if %{with freeworld}
-%global sum_suffix Freeworld version.
-%endif
-
-%if %{with nonfree}
-%global sum_suffix Non-Free version.
-%endif
-
-
-%if %{with freeworld}
-Name:           %{appname}-freeworld
-%else
-Name:           %{appname}
-%endif
-Version:        1.8.2
-Release:        2%{?dist}
+Name:           %{package_name}
+Version:        1.8.4
+Release:        1%{?dist}
 Summary:        Cross-platform, sophisticated frontend for the libretro API. %{sum_suffix}
 
 # CC-BY:        Assets
@@ -152,6 +147,8 @@ BuildRequires:  Cg
 BuildRequires:  libCg
 BuildRequires:  xv
 %endif
+Requires:       perl-Net-DBus
+Requires:       perl-X11-Protocol
 Recommends:     %{name}-assets = %{?epoch:%{epoch}:}%{version}-%{release}
 Recommends:     %{name}-filters%{?_isa} = %{?epoch:%{epoch}:}%{version}-%{release}
 Recommends:     libretro-beetle-ngp%{?_isa}
@@ -197,6 +194,7 @@ engines. libretro is completely open and free for anyone to use.}
 %description %{_description}
 
 
+# Assets package
 %package        assets
 Summary:        Assets files for %{name}
 BuildArch:      noarch
@@ -205,7 +203,7 @@ Requires:       %{name} = %{?epoch:%{epoch}:}%{version}-%{release}
 Requires:       dejavu-sans-mono-fonts
 Recommends:     open-sans-fonts
 
-# Bundled fonts
+# * Bundled fonts
 Provides:       bundled(inter-ui-fonts)
 Provides:       bundled(metrophobic-fonts)
 Provides:       bundled(sf-atarian-system-fonts)
@@ -215,6 +213,7 @@ Provides:       bundled(titilium-web-fonts)
 Assets files for %{name}.
 
 
+# Filters package
 %package        filters
 Summary:        Audio and video filters for %{name}
 
@@ -233,14 +232,14 @@ popd
 
 # Unbundling
 pushd deps
-rm -rf  libfat \
-        libFLAC \
-        libiosuhax \
-        libvita2d \
-        libz \
-        miniupnpc \
-        peglib \
-        pthreads \
+rm -rf  libfat      \
+        libFLAC     \
+        libiosuhax  \
+        libvita2d   \
+        libz        \
+        miniupnpc   \
+        peglib      \
+        pthreads    \
         wayland-protocols
 popd
 
@@ -311,39 +310,22 @@ mv  %{buildroot}%{_datadir}/libretro/assets/ \
 
 # * Move assets license file in proper location
 mkdir -p    %{buildroot}%{_licensedir}/%{name}-assets/
-%if %{with freeworld}
-mv          %{buildroot}%{_datadir}/libretro/assets-freeworld/COPYING \
-%else
-mv          %{buildroot}%{_datadir}/libretro/assets/COPYING \
-%endif
+mv          %{buildroot}%{_datadir}/libretro/assets%{p_suffix}/COPYING \
             %{buildroot}%{_licensedir}/%{name}-assets/COPYING
 
 # * Remove duplicate fonts which available in Fedora repos
-%if %{with freeworld}
-rm  %{buildroot}%{_datadir}/libretro/assets-freeworld/pkg/osd-font.ttf \
-    %{buildroot}%{_datadir}/libretro/assets-freeworld/xmb/flatui/font.ttf
-%else
-rm  %{buildroot}%{_datadir}/libretro/assets/pkg/osd-font.ttf \
-    %{buildroot}%{_datadir}/libretro/assets/xmb/flatui/font.ttf
-%endif
+rm  %{buildroot}%{_datadir}/libretro/assets%{p_suffix}/pkg/osd-font.ttf \
+    %{buildroot}%{_datadir}/libretro/assets%{p_suffix}/xmb/flatui/font.ttf
 
 # Audio filters
 %make_install -C libretro-common/audio/dsp_filters \
     PREFIX=%{_prefix} \
-    %if %{with freeworld}
-    INSTALLDIR=%{_libdir}/retroarch/filters-freeworld/audio
-    %else
-    INSTALLDIR=%{_libdir}/retroarch/filters/audio
-    %endif
+    INSTALLDIR=%{_libdir}/retroarch/filters%{p_suffix}/audio
 
 # Video filters
 %make_install -C gfx/video_filters \
     PREFIX=%{_prefix} \
-    %if %{with freeworld}
-    INSTALLDIR=%{_libdir}/retroarch/filters-freeworld/video
-    %else
-    INSTALLDIR=%{_libdir}/retroarch/filters/video
-    %endif
+    INSTALLDIR=%{_libdir}/retroarch/filters%{p_suffix}/video
 
 # AppData manifest
 install -m 0644 -Dp %{SOURCE2} %{buildroot}%{_metainfodir}/%{uuid}.appdata.xml
@@ -353,7 +335,7 @@ mv  %{buildroot}%{_datadir}/applications/%{appname}.desktop \
     %{buildroot}%{_datadir}/applications/%{uuid}.desktop
 
 %if %{with freeworld}
-# Rename binary, desktop file, appdata manifest and config file
+# Rename binary, desktop file, appdata manifest, manpage and config file
 mv  %{buildroot}%{_bindir}/%{appname} \
     %{buildroot}%{_bindir}/%{appname}-freeworld
 mv  %{buildroot}%{_bindir}/%{appname}-cg2glsl \
@@ -364,6 +346,10 @@ mv  %{buildroot}%{_metainfodir}/%{uuid}.appdata.xml \
     %{buildroot}%{_metainfodir}/%{uuid}-freeworld.appdata.xml
 mv  %{buildroot}%{_sysconfdir}/%{appname}.cfg \
     %{buildroot}%{_sysconfdir}/%{name}.cfg
+mv  %{buildroot}%{_mandir}/man6/%{appname}.6 \
+    %{buildroot}%{_mandir}/man6/%{appname}-freeworld.6
+mv  %{buildroot}%{_mandir}/man6/%{appname}-cg2glsl.6 \
+    %{buildroot}%{_mandir}/man6/%{appname}-cg2glsl-freeworld.6
 sed -i 's|Exec=retroarch|Exec=retroarch-freeworld|' \
     %{buildroot}%{_datadir}/applications/%{uuid}-freeworld.desktop
 sed -i 's|org.libretro.RetroArch.desktop|org.libretro.RetroArch-freeworld.desktop|' \
@@ -379,46 +365,34 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/*.xml
 %files
 %license COPYING
 %doc README.md README-exynos.md README-OMAP.md README-mali_fbdev_r4p0.md CHANGES.md CONTRIBUTING.md
+%{_bindir}/%{appname}*
 %{_datadir}/applications/*.desktop
-%{_metainfodir}/*.xml
 %{_datadir}/pixmaps/*.svg
 %{_mandir}/man6/*
-%config(noreplace) %{_sysconfdir}/%{name}.cfg
+%{_metainfodir}/*.xml
 
-# Freeworld package
-%if %{with freeworld}
-%{_bindir}/%{appname}-freeworld
-%{_bindir}/%{appname}-cg2glsl-freeworld
+# Things may changed in future and it's safe to replace system config since old
+# one will be saved in home dir
+%config %{_sysconfdir}/%{name}.cfg
 
 %files assets
 # Incorrect-fsf-address
 # * https://github.com/libretro/retroarch-assets/issues/335
-%{_datadir}/libretro/assets-freeworld/
 %{_licensedir}/%{name}-assets/
+
+%{_datadir}/libretro/assets%{p_suffix}/
 %dir %{_datadir}/libretro/
 
 %files filters
-%{_libdir}/%{appname}/filters-freeworld/
-%dir %{_libdir}/%{appname}
-%else
-# Free package
-%{_bindir}/%{appname}
-%{_bindir}/%{appname}-cg2glsl
-
-%files assets
-# Incorrect-fsf-address
-# * https://github.com/libretro/retroarch-assets/issues/335
-%{_datadir}/libretro/assets/
-%{_licensedir}/%{appname}-assets/
-%dir %{_datadir}/libretro/
-
-%files filters
-%{_libdir}/%{appname}/filters/
-%dir %{_libdir}/%{appname}
-%endif
+%{_libdir}/%{appname}/filters%{p_suffix}/
+%dir %{_libdir}/%{appname}/
 
 
 %changelog
+* Sun Jan 19 2020 Artem Polishchuk <ego.cordatus@gmail.com> - 1.8.4-1
+- Update to 1.8.4
+- Add missed Perl modules
+
 * Sun Dec 29 2019 Artem Polishchuk <ego.cordatus@gmail.com> - 1.8.2-2
 - Make fully standlone Freeworld package as RPM Fusion recommended
 
